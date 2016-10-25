@@ -3,6 +3,7 @@
 
 #include <string>
 #include <exception>
+#include <iostream>
 #include <stdexcept>
 #include <sstream>
 #include <map>
@@ -11,7 +12,11 @@ template <typename STRUC>
 struct Field {
   virtual void set(STRUC& s, const std::string& value) const = 0;
   virtual std::string get(STRUC& s) const = 0;
+  virtual ~Field() = 0;
 };
+
+template <typename STRUC>
+Field<STRUC>::~Field() {}
 
 template <typename STRUC, typename T>
 struct FieldImpl: public Field<STRUC> {
@@ -21,15 +26,20 @@ struct FieldImpl: public Field<STRUC> {
     memberPtr_ = memberPtr;
   }
 
+  ~FieldImpl() {}
+
   virtual void set(STRUC& s, const std::string& value) const {
     char c;
+    T tmp;
     std::istringstream iss(value);
-    iss >> s.*memberPtr_;
+    iss >> tmp;
 
     if(iss.fail()) {
       iss.clear();
       throw std::runtime_error(std::string("Unable to convert " + value));
     }
+
+    s.*memberPtr_ = tmp;
 
     if(iss.get(c)) {
       std::cerr << "Convert " + value + " to " << s.*memberPtr_ << std::endl;
@@ -96,9 +106,15 @@ struct Parameter {
   virtual std::string Get(const std::string& key) {
     return this->fm_.Get(dynamic_cast<STRUC&>(*this), key);
   }
+
+  virtual ~Parameter() = 0;
+
  protected:
   FieldMap<STRUC> fm_;
 };
+
+template <typename STRUC>
+Parameter<STRUC>::~Parameter() {}
 
 #define DECLARE_FIELD(FieldName, STRUC) this->fm_.bind(#FieldName, &STRUC::FieldName)
 
